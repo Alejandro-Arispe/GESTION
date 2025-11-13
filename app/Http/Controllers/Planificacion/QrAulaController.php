@@ -203,6 +203,8 @@ class QrAulaController extends Controller
     public function generarTodos(Request $request)
     {
         try {
+            \Log::info('Iniciando generarTodos desde API');
+            
             $resumen = $this->qrService->generarQrTodasAulas();
 
             return response()->json([
@@ -211,6 +213,7 @@ class QrAulaController extends Controller
             ], 201);
 
         } catch (Exception $e) {
+            \Log::error('Error en generarTodos: ' . $e->getMessage());
             return response()->json([
                 'message' => 'Error al generar QR masivo',
                 'error' => $e->getMessage()
@@ -224,32 +227,38 @@ class QrAulaController extends Controller
     public function listar()
     {
         try {
-            $aulas = Aula::with('horarios')
-                        ->where('disponible', true)
-                        ->get()
-                        ->map(function ($aula) {
-                            $qr = QrAula::where('id_aula', $aula->id_aula)->first();
-                            return [
-                                'id_aula' => $aula->id_aula,
-                                'nro' => $aula->nro,
-                                'piso' => $aula->piso,
-                                'tipo' => $aula->tipo_aula,
-                                'capacidad' => $aula->capacidad,
-                                'ubicacion_gps' => $aula->ubicacion_gps,
-                                'qr_generado' => $qr ? true : false,
-                                'qr_id' => $qr?->id,
-                                'qr_token' => $qr?->token
-                            ];
-                        });
+            $aulas = Aula::where('disponible', true)
+                        ->orderBy('piso')
+                        ->orderBy('nro')
+                        ->get();
+
+            $aulasFormato = [];
+            foreach ($aulas as $aula) {
+                $qr = QrAula::where('id_aula', $aula->id_aula)->first();
+                
+                $aulasFormato[] = [
+                    'id_aula' => (int)$aula->id_aula,
+                    'nro' => (string)$aula->nro,
+                    'piso' => (int)$aula->piso,
+                    'tipo' => (string)($aula->tipo_aula ?? 'N/A'),
+                    'capacidad' => (int)$aula->capacidad,
+                    'ubicacion_gps' => (string)($aula->ubicacion_gps ?? 'No registrada'),
+                    'qr_generado' => (bool)($qr !== null),
+                    'qr_id' => $qr ? (int)$qr->id : null,
+                    'qr_token' => $qr ? (string)$qr->token : null
+                ];
+            }
 
             return response()->json([
-                'aulas' => $aulas
+                'aulas' => $aulasFormato,
+                'total' => count($aulasFormato)
             ], 200);
 
         } catch (Exception $e) {
             return response()->json([
                 'message' => 'Error al listar aulas',
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
+                'debug' => config('app.debug') ? $e->getTrace() : null
             ], 500);
         }
     }

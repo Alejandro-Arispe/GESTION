@@ -1,75 +1,67 @@
-version: '3'
+version: '3.8'
 
 services:
-  # Servicio de Laravel (PHP)
+  # Servicio de Laravel (PHP + Apache)
   app:
     build:
       context: .
       dockerfile: Dockerfile
-    container_name: laravel_app
+    container_name: ficct_app
     restart: unless-stopped
-    working_dir: /var/www
-    volumes:
-      - ./:/var/www
-    networks:
-      - app_network
-    depends_on:
-      - mysql
-
-  # Servidor web Nginx
-  nginx:
-    image: nginx:alpine
-    container_name: laravel_nginx
-    restart: unless-stopped
+    working_dir: /var/www/html
     ports:
       - "8000:80"
     volumes:
-      - ./:/var/www
-      - ./docker/nginx/conf.d:/etc/nginx/conf.d
-    networks:
-      - app_network
-    depends_on:
-      - app
-
-  # Servicio de MySQL
-  mysql:
-    image: mysql:8.0
-    container_name: laravel_mysql
-    restart: unless-stopped
+      - ./:/var/www/html
+      - ./storage/logs:/var/www/html/storage/logs
     environment:
-      MYSQL_ROOT_PASSWORD: root123
-      MYSQL_DATABASE: si1
-      MYSQL_USER: admin
-      MYSQL_PASSWORD: 1234
-    ports:
-      - "3306:3306"
-    volumes:
-      - mysql_data:/var/lib/mysql
+      - APP_ENV=production
+      - APP_DEBUG=false
+      # Base de datos Supabase (comentar si usas BD local)
+      - DB_CONNECTION=pgsql
+      - DB_HOST=db.lobzlococoykiwesfplm.supabase.co
+      - DB_PORT=5432
+      - DB_DATABASE=postgres
+      - DB_USERNAME=postgres
+      - DB_PASSWORD=${DB_PASSWORD}
     networks:
       - app_network
 
-  # Cliente phpMyAdmin
-  phpmyadmin:
-    image: phpmyadmin/phpmyadmin
-    container_name: laravel_si
-    restart: unless-stopped
-    ports:
-      - "8081:80"
-    environment:
-      PMA_HOST: mysql
-      PMA_PORT: 3306
-      PMA_ARBITRARY: 1     
-      MYSQL_USER: admin
-      MYSQL_ROOT_PASSWORD: 12345
-    networks:
-      - app_network
-    depends_on:
-      - mysql
+  # PostgreSQL LOCAL (opcional - descomentar si prefieres BD local en Docker)
+  # postgres:
+  #   image: postgres:15
+  #   container_name: ficct_postgres
+  #   restart: unless-stopped
+  #   environment:
+  #     POSTGRES_DB: gestion
+  #     POSTGRES_USER: postgres
+  #     POSTGRES_PASSWORD: postgres
+  #   ports:
+  #     - "5432:5432"
+  #   volumes:
+  #     - postgres_data:/var/lib/postgresql/data
+  #   networks:
+  #     - app_network
+
+  # pgAdmin (para gestionar PostgreSQL - opcional)
+  # pgadmin:
+  #   image: dpage/pgadmin4
+  #   container_name: ficct_pgadmin
+  #   restart: unless-stopped
+  #   ports:
+  #     - "5050:80"
+  #   environment:
+  #     PGADMIN_DEFAULT_EMAIL: admin@example.com
+  #     PGADMIN_DEFAULT_PASSWORD: admin
+  #   networks:
+  #     - app_network
+  #   depends_on:
+  #     - postgres
 
 networks:
   app_network:
     driver: bridge
 
-volumes:
-  mysql_data:
-    driver: local
+# volumes:
+#   postgres_data:
+#     driver: local

@@ -160,6 +160,10 @@
                        class="nav-link {{ request()->routeIs('planificacion.horarios.*') ? 'active' : '' }}">
                         <i class="bi bi-clock me-2"></i> Asignar Horarios
                     </a>
+                    <a href="{{ route('planificacion.qr.index') }}" 
+                       class="nav-link {{ request()->routeIs('planificacion.qr.index') ? 'active' : '' }}">
+                        <i class="bi bi-qr-code me-2"></i> Generador de QR
+                    </a>
                 </div>
             </div>
 

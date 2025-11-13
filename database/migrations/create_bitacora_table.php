@@ -11,13 +11,21 @@ return new class extends Migration
         Schema::create('bitacora', function (Blueprint $table) {
             $table->id('id_bitacora');
             $table->unsignedBigInteger('id_usuario')->nullable();
-            $table->timestamp('fecha_hora')->useCurrent();
-            $table->string('accion', 100);
-            $table->text('descripcion')->nullable();
+            $table->timestamp('created_at')->useCurrent();
+            $table->timestamp('updated_at')->nullable();
+            $table->string('accion', 255);
+            $table->longText('descripcion')->nullable();
             $table->string('ip_origen', 45)->nullable();
+            $table->string('navegador', 255)->nullable();
+            $table->string('tabla_afectada', 100)->nullable();
+            $table->unsignedBigInteger('registro_id')->nullable();
             
             $table->foreign('id_usuario')->references('id_usuario')->on('usuario')
                   ->onDelete('set null')->onUpdate('cascade');
+            
+            $table->index('id_usuario');
+            $table->index('created_at');
+            $table->index('accion');
         });
     }
 

@@ -23,8 +23,28 @@ use App\Http\Controllers\Planificacion\HorarioController;
 |--------------------------------------------------------------------------
 */
 Route::get('/', [AuthController::class, 'showLogin'])->name('login');
-Route::post('/login', [AuthController::class, 'login']);
+Route::post('/login', [AuthController::class, 'login'])->name('login.post');
 Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
+
+// Debug (solo en desarrollo)
+if (config('app.debug')) {
+    Route::get('/debug-session', function () {
+        return response()->json([
+            'session_driver' => config('session.driver'),
+            'session_path' => config('session.path'),
+            'session_lifetime' => config('session.lifetime'),
+            'session_domain' => config('session.domain'),
+            'session_secure' => config('session.secure'),
+            'session_http_only' => config('session.http_only'),
+            'session_same_site' => config('session.same_site'),
+            'storage_sessions_path' => storage_path('framework/sessions'),
+            'sessions_dir_exists' => is_dir(storage_path('framework/sessions')),
+            'sessions_dir_writable' => is_writable(storage_path('framework/sessions')),
+            'app_key_present' => !empty(config('app.key')),
+            'csrf_token_sample' => csrf_token(),
+        ]);
+    });
+}
 
 /*
 |--------------------------------------------------------------------------
@@ -75,7 +95,13 @@ Route::middleware('auth')->group(function () {
         Route::resource('roles', RolController::class)->only(['index', 'create', 'store', 'edit', 'update', 'destroy']);
         
         // Bitácora
-        Route::get('bitacora', [BitacoraController::class, 'index'])->name('bitacora.index');
+        Route::prefix('bitacora')->name('bitacora.')->group(function () {
+            Route::get('/', [BitacoraController::class, 'index'])->name('index');
+            Route::get('{id}', [BitacoraController::class, 'show'])->name('show');
+            Route::get('/estadisticas', [BitacoraController::class, 'estadisticas'])->name('estadisticas');
+            Route::post('/exportar', [BitacoraController::class, 'exportar'])->name('exportar');
+            Route::post('/limpiar', [BitacoraController::class, 'limpiar'])->name('limpiar');
+        });
         
         // Importación (CU11)
         Route::prefix('importacion')->name('importacion.')->group(function () {
@@ -433,18 +459,20 @@ Route::middleware('auth')->group(function () {
         // ============================================
         // QR DE AULAS
         // ============================================
-        Route::get('generador-qr', [\App\Http\Controllers\Planificacion\QrAulaController::class, 'index'])->name('qr.index');
-        Route::post('qr/validar', [\App\Http\Controllers\Planificacion\QrAulaController::class, 'validar'])->name('qr.validar');
-        Route::get('qr/{idAula}/mostrar', [\App\Http\Controllers\Planificacion\QrAulaController::class, 'mostrar'])->name('qr.mostrar');
-        Route::post('qr/{idAula}/generar', [\App\Http\Controllers\Planificacion\QrAulaController::class, 'generar'])->name('qr.generar');
-        Route::post('qr/{idAula}/regenerar', [\App\Http\Controllers\Planificacion\QrAulaController::class, 'regenerar'])->name('qr.regenerar');
-        Route::get('qr/listar', [\App\Http\Controllers\Planificacion\QrAulaController::class, 'listar'])->name('qr.listar');
-        Route::post('qr/generar-todos', [\App\Http\Controllers\Planificacion\QrAulaController::class, 'generarTodos'])->name('qr.generar-todos');
-        Route::post('qr/descargar-zip', [\App\Http\Controllers\Planificacion\QrAulaController::class, 'descargarZip'])->name('qr.descargar-zip');
-        Route::post('qr/descargar-zip-todos', [\App\Http\Controllers\Planificacion\QrAulaController::class, 'descargarZipTodos'])->name('qr.descargar-zip-todos');
-        Route::post('qr/regenerar-multiples', [\App\Http\Controllers\Planificacion\QrAulaController::class, 'regenerarMultiples'])->name('qr.regenerar-multiples');
-        Route::post('qr/regenerar-todos', [\App\Http\Controllers\Planificacion\QrAulaController::class, 'regenerarTodos'])->name('qr.regenerar-todos');
-        Route::post('qr/descargar-pdf', [\App\Http\Controllers\Planificacion\QrAulaController::class, 'descargarPdfImprimible'])->name('qr.descargar-pdf');
+        Route::prefix('qr')->name('qr.')->group(function() {
+            Route::get('generador', [\App\Http\Controllers\Planificacion\QrAulaController::class, 'index'])->name('index');
+            Route::post('validar', [\App\Http\Controllers\Planificacion\QrAulaController::class, 'validar'])->name('validar');
+            Route::get('{idAula}/mostrar', [\App\Http\Controllers\Planificacion\QrAulaController::class, 'mostrar'])->name('mostrar');
+            Route::post('{idAula}/generar', [\App\Http\Controllers\Planificacion\QrAulaController::class, 'generar'])->name('generar');
+            Route::post('{idAula}/regenerar', [\App\Http\Controllers\Planificacion\QrAulaController::class, 'regenerar'])->name('regenerar');
+            Route::get('listar', [\App\Http\Controllers\Planificacion\QrAulaController::class, 'listar'])->name('listar');
+            Route::post('generar-todos', [\App\Http\Controllers\Planificacion\QrAulaController::class, 'generarTodos'])->name('generar-todos');
+            Route::post('descargar-zip', [\App\Http\Controllers\Planificacion\QrAulaController::class, 'descargarZip'])->name('descargar-zip');
+            Route::post('descargar-zip-todos', [\App\Http\Controllers\Planificacion\QrAulaController::class, 'descargarZipTodos'])->name('descargar-zip-todos');
+            Route::post('regenerar-multiples', [\App\Http\Controllers\Planificacion\QrAulaController::class, 'regenerarMultiples'])->name('regenerar-multiples');
+            Route::post('regenerar-todos', [\App\Http\Controllers\Planificacion\QrAulaController::class, 'regenerarTodos'])->name('regenerar-todos');
+            Route::post('descargar-pdf', [\App\Http\Controllers\Planificacion\QrAulaController::class, 'descargarPdfImprimible'])->name('descargar-pdf');
+        });
     });
     Route::middleware('auth')->group(function () {
     

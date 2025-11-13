@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use App\Models\ControlSeguimiento\Asistencia;
 use App\Models\ConfiguracionAcademica\Docente;
+use App\Models\ConfiguracionAcademica\Grupo;
 use App\Models\Planificacion\Horario;
 use Carbon\Carbon;
 use Exception;
@@ -109,8 +110,8 @@ class AsistenciaController extends Controller
             $validated = $request->validate([
                 'id_docente' => 'required|exists:docente,id_docente',
                 'id_horario' => 'required|exists:horario,id_horario',
-                'fecha' => 'required|date',
-                'hora_marcado' => 'required|date_format:H:i',
+                'fecha' => 'nullable|date', // Ahora es opcional
+                'hora_marcado' => 'nullable|date_format:H:i', // Ahora es opcional
                 'estado' => 'required|in:Presente,Atrasado,Ausente,Fuera de aula',
                 'latitud' => 'nullable|numeric|between:-90,90',
                 'longitud' => 'nullable|numeric|between:-180,180',
@@ -118,10 +119,15 @@ class AsistenciaController extends Controller
                 'qr_aula_validada' => 'required' // QR OBLIGATORIO
             ]);
 
+            // Usar hora/fecha local automáticamente
+            $ahora = Carbon::now();
+            $fecha = $validated['fecha'] ?? $ahora->format('Y-m-d');
+            $horaMarcado = $validated['hora_marcado'] ?? $ahora->format('H:i');
+
             // Verificar si ya existe registro para ese horario y fecha
             $existe = Asistencia::where('id_docente', $request->id_docente)
                 ->where('id_horario', $request->id_horario)
-                ->whereDate('fecha', $request->fecha)
+                ->whereDate('fecha', $fecha)
                 ->exists();
 
             if ($existe) {
@@ -140,13 +146,13 @@ class AsistenciaController extends Controller
             }
 
             // Determinar estado automáticamente basado en la hora
-            $horaMarcado = Carbon::parse($request->hora_marcado);
+            $horaMarcadoObj = Carbon::parse($horaMarcado);
             $horaInicio = Carbon::parse($horario->hora_inicio);
             $margenAtraso = 10; // minutos
 
             $estado = $request->estado;
             if ($estado === 'Presente') {
-                if ($horaMarcado->greaterThan($horaInicio->addMinutes($margenAtraso))) {
+                if ($horaMarcadoObj->greaterThan($horaInicio->addMinutes($margenAtraso))) {
                     $estado = 'Atrasado';
                 }
             }
@@ -178,16 +184,16 @@ class AsistenciaController extends Controller
             // Procesar foto si se proporciona
             $rutaFoto = null;
             if ($request->hasFile('foto')) {
-                $fecha = date('Ymd');
-                $nombreFoto = "asistencia_{$request->id_docente}_{$fecha}_" . time() . '.' . $request->foto->extension();
+                $fecha_formato = date('Ymd');
+                $nombreFoto = "asistencia_{$request->id_docente}_{$fecha_formato}_" . time() . '.' . $request->foto->extension();
                 $rutaFoto = $request->foto->storeAs('asistencias', $nombreFoto, 'public');
             }
 
             Asistencia::create([
                 'id_docente' => $request->id_docente,
                 'id_horario' => $request->id_horario,
-                'fecha' => $request->fecha,
-                'hora_marcado' => $request->hora_marcado,
+                'fecha' => $fecha,
+                'hora_marcado' => $horaMarcado,
                 'estado' => $estado,
                 'latitud' => $request->latitud,
                 'longitud' => $request->longitud,
@@ -195,7 +201,7 @@ class AsistenciaController extends Controller
             ]);
 
             return redirect()->route('control-seguimiento.asistencia.index')
-                ->with('success', 'Asistencia registrada exitosamente' . 
+                ->with('success', 'Asistencia registrada exitosamente a las ' . $horaMarcado .
                     ($distancia !== null ? " (Ubicación: {$distancia}m del aula)" : ''));
         } catch (Exception $e) {
             return back()->with('error', 'Error al registrar asistencia: ' . $e->getMessage())
@@ -216,8 +222,10 @@ class AsistenciaController extends Controller
                 'longitud' => 'required|numeric|between:-180,180'
             ]);
 
-            $fecha = Carbon::now()->format('Y-m-d');
-            $horaMarcado = Carbon::now()->format('H:i');
+            // Usar hora/fecha actual automáticamente
+            $ahora = Carbon::now();
+            $fecha = $ahora->format('Y-m-d');
+            $horaMarcado = $ahora->format('H:i');
 
             // Verificar si ya registró
             $existe = Asistencia::where('id_docente', $request->id_docente)
@@ -236,16 +244,18 @@ class AsistenciaController extends Controller
             
             // Validar ubicación (si el aula tiene GPS)
             $dentroDeRango = true;
+            $distancia = null;
             if ($horario->aula && $horario->aula->ubicacion_gps) {
                 $dentroDeRango = $this->validarUbicacion(
                     $request->latitud,
                     $request->longitud,
-                    $horario->aula->ubicacion_gps
+                    $horario->aula->ubicacion_gps,
+                    $distancia
                 );
             }
 
             // Determinar estado
-            $horaActual = Carbon::now();
+            $horaActual = $ahora;
             $horaInicio = Carbon::parse($horario->hora_inicio);
             $margen = 10; // minutos
 
@@ -268,9 +278,10 @@ class AsistenciaController extends Controller
             ]);
 
             return response()->json([
-                'message' => 'Asistencia registrada exitosamente',
+                'message' => 'Asistencia registrada exitosamente a las ' . $horaMarcado,
                 'asistencia' => $asistencia,
-                'estado' => $estado
+                'estado' => $estado,
+                'distancia_aula' => $distancia
             ], 201);
         } catch (Exception $e) {
             return response()->json([

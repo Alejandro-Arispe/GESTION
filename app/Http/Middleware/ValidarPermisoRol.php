@@ -22,6 +22,11 @@ class ValidarPermisoRol
 
         $usuario = auth()->user();
         
+        // Si es administrador, permitir acceso a todo
+        if ($usuario->id_rol == 1) { // Asumiendo que 1 es administrador
+            return $next($request);
+        }
+        
         // Obtener permisos del rol del usuario
         $permisos = \DB::table('rol_permiso')
                        ->join('permiso', 'rol_permiso.id_permiso', '=', 'permiso.id_permiso')

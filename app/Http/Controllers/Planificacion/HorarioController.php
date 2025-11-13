@@ -10,6 +10,8 @@ use App\Models\ConfiguracionAcademica\Aula;
 use App\Services\ClassroomAssignmentEngine;
 use Exception;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Database\QueryException;
+use Illuminate\Database\Eloquent\ModelNotFoundException;
 
 class HorarioController extends Controller
 {
@@ -89,6 +91,25 @@ class HorarioController extends Controller
                 'message' => 'Horario creado exitosamente',
                 'horario' => $horario->load(['grupo.materia', 'grupo.docente', 'aula'])
             ], 201);
+        } catch (QueryException $e) {
+            // Capturar errores de base de datos (constraint UNIQUE, etc)
+            if (strpos($e->getMessage(), 'unique constraint') !== false || 
+                strpos($e->getMessage(), 'Unique') !== false ||
+                strpos($e->getMessage(), 'duplicate') !== false) {
+                return response()->json([
+                    'message' => 'Este horario ya existe. No se puede crear un horario duplicado con la misma aula, grupo, día y horas.',
+                    'tipo_error' => 'duplicate',
+                    'conflictos' => [[
+                        'tipo' => 'duplicado',
+                        'mensaje' => 'Ya existe este horario exacto en el sistema'
+                    ]]
+                ], 400);
+            }
+            
+            return response()->json([
+                'message' => 'Error en la base de datos al crear horario',
+                'error' => $e->getMessage()
+            ], 500);
         } catch (Exception $e) {
             return response()->json([
                 'message' => 'Error al crear horario',
@@ -149,6 +170,25 @@ class HorarioController extends Controller
                 'message' => 'Horario actualizado exitosamente',
                 'horario' => $horario->load(['grupo.materia', 'grupo.docente', 'aula'])
             ], 200);
+        } catch (QueryException $e) {
+            // Capturar errores de base de datos (constraint UNIQUE, etc)
+            if (strpos($e->getMessage(), 'unique constraint') !== false || 
+                strpos($e->getMessage(), 'Unique') !== false ||
+                strpos($e->getMessage(), 'duplicate') !== false) {
+                return response()->json([
+                    'message' => 'Este horario ya existe. No se puede actualizar a un horario duplicado.',
+                    'tipo_error' => 'duplicate',
+                    'conflictos' => [[
+                        'tipo' => 'duplicado',
+                        'mensaje' => 'Ya existe este horario exacto en el sistema'
+                    ]]
+                ], 400);
+            }
+            
+            return response()->json([
+                'message' => 'Error en la base de datos al actualizar horario',
+                'error' => $e->getMessage()
+            ], 500);
         } catch (Exception $e) {
             return response()->json([
                 'message' => 'Error al actualizar horario',

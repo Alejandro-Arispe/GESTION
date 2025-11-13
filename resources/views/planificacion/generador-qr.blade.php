@@ -1,18 +1,18 @@
 @extends('layouts.app')
 
 @section('content')
-<div class="container-fluid mt-4">
+<div class="container-fluid mt-3 px-2 px-sm-3 px-md-4">
     <!-- Header -->
     <div class="row mb-4">
-        <div class="col-md-8">
-            <h1 class="display-5">
+        <div class="col-12 col-md-8">
+            <h1 class="display-6 display-md-5">
                 <i class="fas fa-qrcode"></i> Generador de Códigos QR
             </h1>
-            <p class="text-muted">Genera y gestiona códigos QR para las aulas</p>
+            <p class="text-muted small">Genera y gestiona códigos QR para las aulas</p>
         </div>
-        <div class="col-md-4 text-end">
-            <button class="btn btn-success btn-lg" onclick="generarTodosQR()">
-                <i class="fas fa-magic"></i> Generar Todos
+        <div class="col-12 col-md-4 mt-3 mt-md-0">
+            <button class="btn btn-success w-100 w-md-auto" onclick="generarTodosQR()">
+                <i class="fas fa-magic"></i> <span class="d-none d-sm-inline">Generar Todos</span><span class="d-sm-none">Generar</span>
             </button>
         </div>
     </div>
@@ -20,10 +20,10 @@
     <!-- Filtros -->
     <div class="card mb-4 shadow-sm">
         <div class="card-body">
-            <div class="row">
-                <div class="col-md-4">
-                    <label class="form-label"><strong>Piso</strong></label>
-                    <select id="filtro-piso" class="form-select" onchange="aplicarFiltros()">
+            <div class="row g-2 g-sm-3">
+                <div class="col-12 col-sm-6 col-md-4">
+                    <label class="form-label"><strong class="small">Piso</strong></label>
+                    <select id="filtro-piso" class="form-select form-select-sm" onchange="aplicarFiltros()">
                         <option value="">-- Todos los pisos --</option>
                         <option value="1">Primer Piso</option>
                         <option value="2">Segundo Piso</option>
@@ -31,9 +31,9 @@
                         <option value="4">Cuarto Piso</option>
                     </select>
                 </div>
-                <div class="col-md-4">
-                    <label class="form-label"><strong>Tipo de Aula</strong></label>
-                    <select id="filtro-tipo" class="form-select" onchange="aplicarFiltros()">
+                <div class="col-12 col-sm-6 col-md-4">
+                    <label class="form-label"><strong class="small">Tipo de Aula</strong></label>
+                    <select id="filtro-tipo" class="form-select form-select-sm" onchange="aplicarFiltros()">
                         <option value="">-- Todos los tipos --</option>
                         <option value="Laboratorio">Laboratorio</option>
                         <option value="Teoría">Teoría</option>
@@ -41,9 +41,9 @@
                         <option value="Práctico">Práctico</option>
                     </select>
                 </div>
-                <div class="col-md-4">
-                    <label class="form-label"><strong>Estado QR</strong></label>
-                    <select id="filtro-qr" class="form-select" onchange="aplicarFiltros()">
+                <div class="col-12 col-md-4">
+                    <label class="form-label"><strong class="small">Estado QR</strong></label>
+                    <select id="filtro-qr" class="form-select form-select-sm" onchange="aplicarFiltros()">
                         <option value="">-- Todos --</option>
                         <option value="generado">Generados</option>
                         <option value="no-generado">No Generados</option>
@@ -54,34 +54,34 @@
     </div>
 
     <!-- Tabla de Aulas -->
-    <div class="card shadow-sm">
+    <div class="card shadow-sm mb-4">
         <div class="card-header bg-primary text-white">
-            <h5 class="mb-0">
-                <i class="fas fa-building"></i> Aulas Disponibles
-                <span class="badge bg-light text-primary float-end" id="total-aulas">0</span>
+            <h5 class="mb-0 small">
+                <i class="fas fa-building"></i> <span class="d-none d-sm-inline">Aulas Disponibles</span><span class="d-sm-none">Aulas</span>
+                <span class="badge bg-light text-primary ms-2" id="total-aulas">0</span>
             </h5>
         </div>
         <div class="card-body p-0">
             <div class="table-responsive">
-                <table class="table table-hover mb-0" id="tabla-aulas">
+                <table class="table table-hover mb-0 table-sm" id="tabla-aulas">
                     <thead class="table-light">
                         <tr>
-                            <th class="text-center" style="width: 50px;">
+                            <th class="text-center" style="width: 40px;">
                                 <input type="checkbox" id="select-all" onchange="toggleSeleccionar()">
                             </th>
-                            <th>Aula</th>
-                            <th>Piso</th>
-                            <th>Tipo</th>
-                            <th>Capacidad</th>
-                            <th>Ubicación GPS</th>
-                            <th>Estado QR</th>
-                            <th class="text-center">Acciones</th>
+                            <th class="small">Aula</th>
+                            <th class="small d-none d-sm-table-cell">Piso</th>
+                            <th class="small d-none d-md-table-cell">Tipo</th>
+                            <th class="small d-none d-lg-table-cell">Cap.</th>
+                            <th class="small d-none d-xl-table-cell">GPS</th>
+                            <th class="small">Estado</th>
+                            <th class="text-center small">Acciones</th>
                         </tr>
                     </thead>
                     <tbody id="tbody-aulas">
                         <tr>
                             <td colspan="8" class="text-center py-4">
-                                <div class="spinner-border text-primary" role="status">
+                                <div class="spinner-border spinner-border-sm text-primary" role="status">
                                     <span class="visually-hidden">Cargando...</span>
                                 </div>
                             </td>
@@ -92,45 +92,45 @@
         </div>
     </div>
 
-    <!-- Sección de Descargas -->
-    <div class="row mt-4">
-        <div class="col-md-6">
-            <div class="card shadow-sm">
+    <!-- Sección de Descargas y Regeneración -->
+    <div class="row g-3 mb-4">
+        <div class="col-12 col-md-6">
+            <div class="card shadow-sm h-100">
                 <div class="card-header bg-info text-white">
-                    <h5 class="mb-0">
+                    <h6 class="mb-0">
                         <i class="fas fa-download"></i> Descargas
-                    </h5>
+                    </h6>
                 </div>
                 <div class="card-body">
-                    <button class="btn btn-outline-info w-100 mb-2" onclick="descargarQRSeleccionados()">
-                        <i class="fas fa-image"></i> Descargar QR Seleccionados (ZIP)
+                    <button class="btn btn-outline-info w-100 mb-2 btn-sm" onclick="descargarQRSeleccionados()">
+                        <i class="fas fa-image"></i> <span class="d-none d-sm-inline">Seleccionados (ZIP)</span><span class="d-sm-none">Sel.</span>
                     </button>
-                    <button class="btn btn-outline-info w-100 mb-2" onclick="descargarQRTodos()">
-                        <i class="fas fa-images"></i> Descargar Todos QR (ZIP)
+                    <button class="btn btn-outline-info w-100 mb-2 btn-sm" onclick="descargarQRTodos()">
+                        <i class="fas fa-images"></i> <span class="d-none d-sm-inline">Todos (ZIP)</span><span class="d-sm-none">Todos</span>
                     </button>
-                    <button class="btn btn-outline-info w-100" onclick="window.location.href='/planificacion/qr/descargar-pdf?formato=2x3'">
-                        <i class="fas fa-file-pdf"></i> Descargar PDF Imprimible
+                    <button class="btn btn-outline-info w-100 btn-sm" onclick="window.location.href='/planificacion/qr/descargar-pdf?formato=2x3'">
+                        <i class="fas fa-file-pdf"></i> <span class="d-none d-sm-inline">PDF</span><span class="d-sm-none">PDF</span>
                     </button>
                 </div>
             </div>
         </div>
 
-        <div class="col-md-6">
-            <div class="card shadow-sm">
+        <div class="col-12 col-md-6">
+            <div class="card shadow-sm h-100">
                 <div class="card-header bg-warning text-dark">
-                    <h5 class="mb-0">
+                    <h6 class="mb-0">
                         <i class="fas fa-sync-alt"></i> Regenerar
-                    </h5>
+                    </h6>
                 </div>
                 <div class="card-body">
-                    <p class="text-muted small mb-3">
-                        <i class="fas fa-info-circle"></i> La regeneración invalidará los códigos anteriores
+                    <p class="text-muted small mb-3 mb-sm-2">
+                        <i class="fas fa-info-circle"></i> <span class="d-none d-sm-inline">Invalidará códigos anteriores</span><span class="d-sm-none">Invalida códigos</span>
                     </p>
-                    <button class="btn btn-outline-warning w-100 mb-2" onclick="regenerarSeleccionados()">
-                        <i class="fas fa-sync-alt"></i> Regenerar Seleccionados
+                    <button class="btn btn-outline-warning w-100 mb-2 btn-sm" onclick="regenerarSeleccionados()">
+                        <i class="fas fa-sync-alt"></i> <span class="d-none d-sm-inline">Seleccionados</span><span class="d-sm-none">Sel.</span>
                     </button>
-                    <button class="btn btn-outline-danger w-100" onclick="regenerarTodos()">
-                        <i class="fas fa-exclamation-triangle"></i> Regenerar Todos
+                    <button class="btn btn-outline-danger w-100 btn-sm" onclick="regenerarTodos()">
+                        <i class="fas fa-exclamation-triangle"></i> <span class="d-none d-sm-inline">Todos</span><span class="d-sm-none">Todo</span>
                     </button>
                 </div>
             </div>
@@ -138,53 +138,53 @@
     </div>
 
     <!-- Estadísticas -->
-    <div class="row mt-4">
-        <div class="col-md-3">
-            <div class="card text-center shadow-sm">
-                <div class="card-body">
-                    <h3 class="display-6 text-primary" id="stat-total">0</h3>
-                    <p class="text-muted mb-0">Aulas Totales</p>
+    <div class="row g-2 g-sm-3 mt-4">
+        <div class="col-6 col-sm-6 col-md-3">
+            <div class="card text-center shadow-sm h-100">
+                <div class="card-body p-2 p-sm-3">
+                    <h5 class="display-6 text-primary mb-2" id="stat-total">0</h5>
+                    <p class="text-muted mb-0 small">Totales</p>
                 </div>
             </div>
         </div>
-        <div class="col-md-3">
-            <div class="card text-center shadow-sm">
-                <div class="card-body">
-                    <h3 class="display-6 text-success" id="stat-generados">0</h3>
-                    <p class="text-muted mb-0">QR Generados</p>
+        <div class="col-6 col-sm-6 col-md-3">
+            <div class="card text-center shadow-sm h-100">
+                <div class="card-body p-2 p-sm-3">
+                    <h5 class="display-6 text-success mb-2" id="stat-generados">0</h5>
+                    <p class="text-muted mb-0 small">Generados</p>
                 </div>
             </div>
         </div>
-        <div class="col-md-3">
-            <div class="card text-center shadow-sm">
-                <div class="card-body">
-                    <h3 class="display-6 text-warning" id="stat-pendientes">0</h3>
-                    <p class="text-muted mb-0">Pendientes</p>
+        <div class="col-6 col-sm-6 col-md-3">
+            <div class="card text-center shadow-sm h-100">
+                <div class="card-body p-2 p-sm-3">
+                    <h5 class="display-6 text-warning mb-2" id="stat-pendientes">0</h5>
+                    <p class="text-muted mb-0 small">Pendientes</p>
                 </div>
             </div>
         </div>
-        <div class="col-md-3">
-            <div class="card text-center shadow-sm">
-                <div class="card-body">
-                    <h3 class="display-6 text-info" id="stat-porcentaje">0%</h3>
-                    <p class="text-muted mb-0">Completado</p>
+        <div class="col-6 col-sm-6 col-md-3">
+            <div class="card text-center shadow-sm h-100">
+                <div class="card-body p-2 p-sm-3">
+                    <h5 class="display-6 text-info mb-2" id="stat-porcentaje">0%</h5>
+                    <p class="text-muted mb-0 small">Completado</p>
                 </div>
             </div>
         </div>
     </div>
 </div>
 
-<!-- Modal para vista previa de QR -->
+<!-- Modal para vista previa de QR (Responsivo) -->
 <div class="modal fade" id="modal-qr" tabindex="-1">
-    <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-dialog modal-dialog-centered modal-sm">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title" id="modal-aula">Código QR - Aula</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                <h6 class="modal-title" id="modal-aula">Código QR</h6>
+                <button type="button" class="btn-close btn-sm" data-bs-dismiss="modal"></button>
             </div>
-            <div class="modal-body text-center p-4">
-                <img id="modal-qr-image" src="" alt="QR" class="img-fluid" style="max-width: 300px;">
-                <p class="mt-3 text-muted">
+            <div class="modal-body text-center p-3">
+                <img id="modal-qr-image" src="" alt="QR" class="img-fluid" style="max-width: 100%; height: auto;">
+                <p class="mt-2 text-muted small">
                     <small id="modal-token"></small>
                 </p>
             </div>
@@ -208,20 +208,35 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 function cargarAulas() {
-    fetch('/planificacion/qr/listar', {
+    console.log('Iniciando carga de aulas...');
+    
+    fetch('/api/qr-aula/listar', {
+        method: 'GET',
         headers: {
-            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
-        }
+            'Accept': 'application/json',
+            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content || ''
+        },
+        credentials: 'same-origin'
     })
-    .then(response => response.json())
+    .then(response => {
+        console.log('Response status:', response.status);
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        return response.json();
+    })
     .then(data => {
-        aulas = data.aulas;
+        console.log('Datos recibidos:', data);
+        aulas = data.aulas || [];
         renderizarTabla();
         actualizarEstadisticas();
     })
     .catch(error => {
-        console.error('Error:', error);
-        alert('Error al cargar las aulas');
+        console.error('Error al cargar aulas:', error);
+        const tbody = document.getElementById('tbody-aulas');
+        tbody.innerHTML = `<tr><td colspan="8" class="text-center py-4 text-danger">
+            <strong>Error al cargar las aulas:</strong> ${error.message}
+        </td></tr>`;
     });
 }
 
@@ -358,15 +373,17 @@ function generarQR(id_aula) {
     const boton = event.target.closest('button');
     boton.disabled = true;
 
-    fetch(`/planificacion/qr/${id_aula}/generar`, {
+    fetch(`/api/qr-aula/generar/${id_aula}`, {
         method: 'POST',
         headers: {
-            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
-        }
+            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+            'Accept': 'application/json'
+        },
+        credentials: 'same-origin'
     })
     .then(response => response.json())
     .then(data => {
-        if (data.success) {
+        if (data.qr || data.message) {
             mostrarNotificacion('QR generado exitosamente', 'success');
             cargarAulas();
         } else {
@@ -375,7 +392,7 @@ function generarQR(id_aula) {
     })
     .catch(error => {
         console.error('Error:', error);
-        mostrarNotificacion('Error al generar QR', 'error');
+        mostrarNotificacion('Error al generar QR: ' + error.message, 'error');
     })
     .finally(() => {
         boton.disabled = false;
@@ -389,16 +406,20 @@ function generarTodosQR() {
     boton.disabled = true;
     boton.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Generando...';
 
-    fetch('/planificacion/qr/generar-todos', {
+    fetch('/api/qr-aula/generar-todos', {
         method: 'POST',
         headers: {
-            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
-        }
+            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+            'Accept': 'application/json'
+        },
+        credentials: 'same-origin'
     })
     .then(response => response.json())
     .then(data => {
-        if (data.success) {
-            mostrarNotificacion(`${data.generados} QR generados exitosamente`, 'success');
+        console.log('Respuesta:', data);
+        if (data.resumen || data.message) {
+            const generados = data.resumen ? data.resumen.generados : 0;
+            mostrarNotificacion(`${generados} QR generados exitosamente`, 'success');
             cargarAulas();
         } else {
             mostrarNotificacion('Error al generar QRs', 'error');
@@ -406,7 +427,7 @@ function generarTodosQR() {
     })
     .catch(error => {
         console.error('Error:', error);
-        mostrarNotificacion('Error al generar QRs', 'error');
+        mostrarNotificacion('Error al generar QRs: ' + error.message, 'error');
     })
     .finally(() => {
         boton.disabled = false;
@@ -417,15 +438,17 @@ function generarTodosQR() {
 function regenerarQR(id_aula) {
     if (!confirm('¿Regenerar QR para esta aula? El código anterior será invalidado.')) return;
 
-    fetch(`/planificacion/qr/${id_aula}/regenerar`, {
+    fetch(`/api/qr-aula/regenerar/${id_aula}`, {
         method: 'POST',
         headers: {
-            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
-        }
+            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+            'Accept': 'application/json'
+        },
+        credentials: 'same-origin'
     })
     .then(response => response.json())
     .then(data => {
-        if (data.success) {
+        if (data.qr || data.message) {
             mostrarNotificacion('QR regenerado exitosamente', 'success');
             cargarAulas();
         } else {
@@ -434,7 +457,7 @@ function regenerarQR(id_aula) {
     })
     .catch(error => {
         console.error('Error:', error);
-        mostrarNotificacion('Error al regenerar QR', 'error');
+        mostrarNotificacion('Error al regenerar QR: ' + error.message, 'error');
     });
 }
 
@@ -447,7 +470,7 @@ function verQR(id_aula) {
 
     document.getElementById('modal-aula').textContent = `Código QR - Aula ${aula.nro}`;
     document.getElementById('modal-token').textContent = `Token: ${aula.qr_token}`;
-    document.getElementById('modal-qr-image').src = `/planificacion/qr/${id_aula}/mostrar`;
+    document.getElementById('modal-qr-image').src = `/api/qr-aula/${id_aula}/mostrar`;
     
     new bootstrap.Modal(document.getElementById('modal-qr')).show();
 }

@@ -12,10 +12,19 @@ use App\Http\Controllers\ConfiguracionAcademica\GrupoController;
 use App\Http\Controllers\ConfiguracionAcademica\AulaController;
 use App\Http\Controllers\Planificacion\HorarioController;
 
-// ============================================
-// RUTAS PÚBLICAS (Sin autenticación)
-// ============================================
-Route::post('/login', [AuthController::class, 'login']);
+// --- QR DE AULAS: Listar es público ---
+Route::get('qr-aula/listar', [\App\Http\Controllers\Planificacion\QrAulaController::class, 'listar']);
+
+// --- QR DE AULAS: Generar/Regenerar PÚBLICO ---
+Route::post('qr-aula/generar/{idAula}', [\App\Http\Controllers\Planificacion\QrAulaController::class, 'generar']);
+Route::post('qr-aula/regenerar/{idAula}', [\App\Http\Controllers\Planificacion\QrAulaController::class, 'regenerar']);
+Route::post('qr-aula/generar-todos', [\App\Http\Controllers\Planificacion\QrAulaController::class, 'generarTodos']);
+Route::get('qr-aula/{idAula}', [\App\Http\Controllers\Planificacion\QrAulaController::class, 'obtener']);
+Route::get('qr-aula/{idAula}/mostrar', [\App\Http\Controllers\Planificacion\QrAulaController::class, 'mostrar']);
+Route::get('qr-aula/{idAula}/descargar', [\App\Http\Controllers\Planificacion\QrAulaController::class, 'descargar']);
+
+// --- VALIDAR QR LEÍDO (Endpoint público para asistencia) ---
+Route::post('qr-aula/validar', [\App\Http\Controllers\Planificacion\QrAulaController::class, 'validar']);
 
 // ============================================
 // RUTAS PROTEGIDAS (Requieren autenticación)
@@ -79,32 +88,6 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::middleware('permission:gestionar_aulas')->group(function () {
         Route::apiResource('aulas', AulaController::class);
     });
-
-    // ============================================
-    // PAQUETE: PLANIFICACIÓN ACADÉMICA
-    // ============================================
-    
-    // --- HORARIOS (CU07) ---
-    Route::middleware('permission:gestionar_horarios')->group(function () {
-        Route::apiResource('horarios', HorarioController::class);
-        Route::post('horarios/validar-conflictos', [HorarioController::class, 'validarConflictos']);
-        Route::post('horarios/asignar-automatico', [HorarioController::class, 'asignarAutomatico']);
-        Route::get('horarios/carga-horaria', [HorarioController::class, 'obtenerCargaHoraria']);
-    });
-
-    // --- QR DE AULAS (CU07) ---
-    Route::middleware('permission:gestionar_horarios')->group(function () {
-        Route::get('qr-aula/listar', [\App\Http\Controllers\Planificacion\QrAulaController::class, 'listar']);
-        Route::post('qr-aula/generar/{idAula}', [\App\Http\Controllers\Planificacion\QrAulaController::class, 'generar']);
-        Route::post('qr-aula/regenerar/{idAula}', [\App\Http\Controllers\Planificacion\QrAulaController::class, 'regenerar']);
-        Route::post('qr-aula/generar-todos', [\App\Http\Controllers\Planificacion\QrAulaController::class, 'generarTodos']);
-        Route::get('qr-aula/{idAula}', [\App\Http\Controllers\Planificacion\QrAulaController::class, 'obtener']);
-        Route::get('qr-aula/{idAula}/mostrar', [\App\Http\Controllers\Planificacion\QrAulaController::class, 'mostrar']);
-        Route::get('qr-aula/{idAula}/descargar', [\App\Http\Controllers\Planificacion\QrAulaController::class, 'descargar']);
-    });
-
-    // --- VALIDAR QR LEÍDO (Endpoint público para asistencia) ---
-    Route::post('qr-aula/validar', [\App\Http\Controllers\Planificacion\QrAulaController::class, 'validar']);
 
     // ============================================
     // RUTAS DE CONSULTA (Sin restricción de permisos)

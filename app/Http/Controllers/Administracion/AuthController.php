@@ -28,22 +28,6 @@ class AuthController extends Controller
      */
     public function login(Request $request)
     {
-        //borrar despues desde aqui
-        // if ($credentials['username'] === 'admin') {
-        //     // 1. Buscar el usuario 'admin' directamente en la BD
-        //     $adminUser = Usuario::where('username', 'admin')->first();
-
-        //     // 2. Si existe (y debe existir por el seeder), forzar login
-        //     if ($adminUser) {
-        //         Auth::login($adminUser);
-        //         $request->session()->regenerate();
-                
-        //         // Retornar éxito (como si hubiera pasado el Auth::attempt)
-        //         return redirect()->intended('dashboard')
-        //             ->with('success', '¡Bienvenido ' . $adminUser->username . ' (ACCESO FORZADO)!');
-        //     }
-        // }
-        //hasta aqyu 
         $request->validate([
             'username' => 'required|string',
             'password' => 'required|string'
@@ -56,6 +40,7 @@ class AuthController extends Controller
 
         // Intentar autenticación
         if (Auth::attempt($credentials)) {
+            // Regenerar sesión
             $request->session()->regenerate();
             
             return redirect()->intended('dashboard')

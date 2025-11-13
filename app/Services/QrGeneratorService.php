@@ -5,7 +5,8 @@ namespace App\Services;
 use App\Models\Planificacion\QrAula;
 use App\Models\ConfiguracionAcademica\Aula;
 use Illuminate\Support\Str;
-use SimpleSoftwareIO\QrCode\Facades\QrCode;
+use Endroid\QrCode\QrCode;
+use Endroid\QrCode\Writer\SvgWriter;
 
 class QrGeneratorService
 {
@@ -39,8 +40,15 @@ class QrGeneratorService
             'generado_en' => now()->toIso8601String()
         ]);
 
-        // Generar código QR
-        $codigoQr = QrCode::format('svg')->size(300)->generate($contenidoQr);
+        // Generar código QR usando endroid/qr-code
+        try {
+            $qrCode = new QrCode($contenidoQr);
+            $writer = new SvgWriter();
+            $result = $writer->write($qrCode);
+            $codigoQr = $result->getString();
+        } catch (\Exception $e) {
+            throw new \Exception('Error al generar QR: ' . $e->getMessage());
+        }
 
         // Guardar en BD
         $qr = QrAula::create([
