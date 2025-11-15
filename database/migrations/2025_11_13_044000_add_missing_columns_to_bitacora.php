@@ -36,7 +36,7 @@ return new class extends Migration
                 
                 // Agregar índice a created_at si no existe
                 try {
-                    $table->index('created_at');
+                    $table->index('created_at', 'bitacora_created_at_index')->nullable();
                 } catch (\Exception $e) {
                     // El índice ya puede existir
                 }
