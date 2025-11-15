@@ -1,0 +1,30 @@
+services:
+  - type: web
+    name: ficct-app
+    env: docker
+    plan: free
+    dockerfilePath: ./Dockerfile
+    envVars:
+      - key: APP_ENV
+        value: production
+      - key: APP_DEBUG
+        value: "false"
+      - key: DB_CONNECTION
+        value: pgsql
+      - key: DB_HOST
+        value: db.lobzlococoykiwesfplm.supabase.co
+      - key: DB_PORT
+        value: "5432"
+      - key: DB_DATABASE
+        value: postgres
+      - key: DB_USERNAME
+        value: postgres
+      - key: DB_PASSWORD
+        syncWith: RENDER_DB_PASSWORD
+    preDeployCommand: >
+      php artisan config:cache &&
+      php artisan route:cache &&
+      php artisan migrate --force
+    healthCheckPath: /
+    domains:
+      - tu-dominio.onrender.com
