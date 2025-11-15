@@ -1,12 +1,12 @@
 <?php
 
-namespace App\Http\Controllers\administracion;
+namespace App\Http\Controllers\Administracion;
 
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
-use App\Models\administracion\Usuario;
-use App\Models\administracion\Rol;
+use App\Models\Administracion\Usuario;
+use App\Models\Administracion\Rol;
 use Illuminate\Validation\Rule;
 
 class UserController extends Controller

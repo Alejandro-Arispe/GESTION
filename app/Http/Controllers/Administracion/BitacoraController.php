@@ -3,8 +3,8 @@
 namespace App\Http\Controllers\Administracion;
 
 use App\Http\Controllers\Controller;
-use App\Models\administracion\Bitacora;
-use App\Models\administracion\Usuario;
+use App\Models\Administracion\Bitacora;
+use App\Models\Administracion\Usuario;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;

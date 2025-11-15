@@ -27,10 +27,15 @@ WORKDIR /var/www/html
 # Copiar archivos del proyecto
 COPY . .
 
+# Crear y dar permisos a directorios necesarios ANTES de Composer
+RUN mkdir -p bootstrap/cache storage/logs storage/app \
+    && chmod -R 777 bootstrap/cache storage/logs storage/app \
+    && chown -R www-data:www-data /var/www/html
+
 # Instalar dependencias de Composer
 RUN composer install --no-dev --optimize-autoloader
 
-# Cambiar permisos
+# Cambiar permisos finales
 RUN chown -R www-data:www-data /var/www/html \
     && chmod -R 755 /var/www/html/storage \
     && chmod -R 755 /var/www/html/bootstrap/cache
