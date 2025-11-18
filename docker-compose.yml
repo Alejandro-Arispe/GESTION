@@ -23,6 +23,8 @@ services:
       - DB_DATABASE=gestion_t597
       - DB_USERNAME=gestion_t597_user
       - DB_PASSWORD=63UwvsuhhzJtHL7ezw4tHaH7SmTcBunf
+      - DB_SSLMODE=require
+
 
     networks:
       - app_network
