@@ -393,6 +393,7 @@ function cerrarLectorQR() {
     document.getElementById('btn-scanner-qr').style.display = 'block';
     document.getElementById('btn-cerrar-scanner').style.display = 'none';
 }
+
 function leerQR() {
     const video = document.getElementById('qr-video');
     const canvas = document.createElement('canvas');
@@ -405,7 +406,9 @@ function leerQR() {
     let procesando = false;
 
     const procesarFrame = () => {
-        if (!qrScannerActive || procesando) return;
+        if (!qrScannerActive || procesando) {
+            return;
+        }
 
         if (video.readyState === video.HAVE_ENOUGH_DATA && video.videoWidth > 0) {
             procesando = true;
@@ -422,11 +425,10 @@ function leerQR() {
                 // Procesar QR
                 const code = jsQR(imageData.data, canvas.width, canvas.height);
 
-                if (code) {
+                if (code && qrScannerActive) { // Verificar que aún esté activo
                     console.log('QR detectado:', code.data);
                     validarQRLeido(code.data);
-                    procesando = false;
-                    return;
+                    return; // No continuar el loop
                 }
             } catch (e) {
                 console.warn('Error procesando frame QR:', e);
@@ -434,7 +436,9 @@ function leerQR() {
             
             procesando = false;
         }
-        if (qrScannerActive) {
+        
+        // Solo continuar si el scanner sigue activo y no hemos validado un QR
+        if (qrScannerActive && !qrValidated) {
             requestAnimationFrame(procesarFrame);
         }
     };
@@ -471,9 +475,21 @@ function validarQRLeido(codigoQr) {
     const messageSpan = document.getElementById('qr-message');
     const successDiv = document.getElementById('qr-success');
 
+    // Verificar que los elementos existan antes de usarlos
+    if (!statusDiv || !messageSpan || !successDiv) {
+        console.error('Elementos del DOM para QR no encontrados');
+        alert('Error: Elementos de interfaz no encontrados. Recarga la página.');
+        return;
+    }
+
+    // Detener el scanner inmediatamente
+    qrScannerActive = false;
+
     // Mostrar estado de validación
     messageSpan.textContent = 'Validando QR...';
-    statusDiv.classList.remove('d-none');
+    statusDiv.classList.remove('d-none', 'alert-danger');
+    statusDiv.classList.add('alert-warning');
+    successDiv.classList.add('d-none');
 
     // Enviar al servidor
     fetch('{{ route("planificacion.qr.validar") }}', {
@@ -486,42 +502,70 @@ function validarQRLeido(codigoQr) {
             codigo_qr_leido: codigoQr
         })
     })
-    .then(response => response.json())
+    .then(response => {
+        if (!response.ok) {
+            throw new Error('Error en la respuesta del servidor');
+        }
+        return response.json();
+    })
     .then(data => {
         if (data.valido) {
             // Éxito
             qrValidated = true;
             document.getElementById('qr_aula_validada').value = data.aula.id_aula;
             
-            // Mostrar información del aula
-            document.getElementById('qr-aula-nro').textContent = data.aula.nro_aula;
-            document.getElementById('qr-aula-piso').textContent = data.aula.piso;
-            document.getElementById('qr-aula-tipo').textContent = data.aula.tipo_aula;
+            // Mostrar información del aula (verificar que los elementos existan)
+            const aulaNro = document.getElementById('qr-aula-nro');
+            const aulaPiso = document.getElementById('qr-aula-piso');
+            const aulaTipo = document.getElementById('qr-aula-tipo');
+            
+            if (aulaNro) aulaNro.textContent = data.aula.nro_aula;
+            if (aulaPiso) aulaPiso.textContent = data.aula.piso;
+            if (aulaTipo) aulaTipo.textContent = data.aula.tipo_aula;
             
             // Ocultar estado, mostrar éxito
             statusDiv.classList.add('d-none');
             successDiv.classList.remove('d-none');
             
-            // Cerrar scanner
-            cerrarLectorQR();
+            // Cerrar scanner completamente
+            limpiarRecursosQR();
             
-            // Actualizar botón
-            document.getElementById('btn-scanner-qr').classList.remove('btn-danger');
-            document.getElementById('btn-scanner-qr').classList.add('btn-success');
-            document.getElementById('btn-scanner-qr').innerHTML = '<i class="bi bi-check-circle me-1"></i> QR Validado ✓';
-            document.getElementById('btn-scanner-qr').disabled = true;
+            // Actualizar botón (verificar que existe)
+            const btnScanner = document.getElementById('btn-scanner-qr');
+            if (btnScanner) {
+                btnScanner.classList.remove('btn-danger');
+                btnScanner.classList.add('btn-success');
+                btnScanner.innerHTML = '<i class="bi bi-check-circle me-1"></i> QR Validado ✓';
+                btnScanner.disabled = true;
+            }
         } else {
-            // Error
+            // Error - reactivar scanner
             messageSpan.textContent = '❌ ' + (data.message || 'QR no válido o no registrado');
             statusDiv.classList.remove('alert-warning');
             statusDiv.classList.add('alert-danger');
+            
+            // Reactivar el scanner después de un error
+            setTimeout(() => {
+                if (!qrValidated) {
+                    qrScannerActive = true;
+                    leerQR();
+                }
+            }, 2000);
         }
     })
     .catch(error => {
         console.error('Error:', error);
-        messageSpan.textContent = '❌ Error al validar QR: ' + error.message;
+        messageSpan.textContent = 'Error al validar QR: ' + error.message;
         statusDiv.classList.remove('alert-warning');
         statusDiv.classList.add('alert-danger');
+        
+        // Reactivar el scanner después de un error
+        setTimeout(() => {
+            if (!qrValidated) {
+                qrScannerActive = true;
+                leerQR();
+            }
+        }, 2000);
     });
 }
 
