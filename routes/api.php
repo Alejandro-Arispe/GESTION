@@ -94,4 +94,19 @@ Route::middleware('auth:sanctum')->group(function () {
     // ============================================
     Route::get('facultades-publicas', [FacultadController::class, 'index']);
     Route::get('horarios-consulta', [HorarioController::class, 'index']);
+    
+    // Validación de conflictos disponible para todos los usuarios autenticados
+    Route::post('horarios/validar-conflictos', [HorarioController::class, 'validarConflictos']);
+    
+    // DEBUG: Ver horarios de un aula
+    Route::get('horarios/debug-aula/{id}', [HorarioController::class, 'debugAula']);
+    
+    // ============================================
+    // HORARIOS - GESTIÓN Y VALIDACIÓN
+    // ============================================
+    Route::middleware('permission:gestionar_horarios')->group(function () {
+        Route::apiResource('horarios', HorarioController::class);
+        Route::post('horarios/asignar-automatico', [HorarioController::class, 'asignarAutomatico']);
+        Route::get('horarios/carga-horaria', [HorarioController::class, 'obtenerCargaHoraria']);
+    });
 });

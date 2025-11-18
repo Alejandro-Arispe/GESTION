@@ -24,7 +24,8 @@ services:
     preDeployCommand: >
       php artisan config:cache &&
       php artisan route:cache &&
-      php artisan migrate --force
+      php artisan migrate --force &&
+      php artisan db:seed --class=CreateDefaultUserSeeder
     healthCheckPath: /
     domains:
       - tu-dominio.onrender.com

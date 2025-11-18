@@ -75,45 +75,49 @@ class HorarioController extends Controller
                 'tipo_asignacion' => 'nullable|in:Manual,Automática'
             ]);
 
-            // Validar conflictos
+            // Validar conflictos ANTES de guardar
             $conflictos = $this->validarConflictosInterno($request->all());
 
             if (!empty($conflictos)) {
                 return response()->json([
-                    'message' => 'Existen conflictos de horario',
-                    'conflictos' => $conflictos
+                    'message' => 'Existen conflictos de horario. No se puede registrar.',
+                    'conflictos' => $conflictos,
+                    'puede_guardar' => false
                 ], 400);
             }
 
+            // Si no hay conflictos, crear el horario
             $horario = Horario::create($request->all());
 
             return response()->json([
                 'message' => 'Horario creado exitosamente',
-                'horario' => $horario->load(['grupo.materia', 'grupo.docente', 'aula'])
+                'horario' => $horario->load(['grupo.materia', 'grupo.docente', 'aula']),
+                'puede_guardar' => true
             ], 201);
         } catch (QueryException $e) {
-            // Capturar errores de base de datos (constraint UNIQUE, etc)
             if (strpos($e->getMessage(), 'unique constraint') !== false || 
                 strpos($e->getMessage(), 'Unique') !== false ||
                 strpos($e->getMessage(), 'duplicate') !== false) {
                 return response()->json([
-                    'message' => 'Este horario ya existe. No se puede crear un horario duplicado con la misma aula, grupo, día y horas.',
-                    'tipo_error' => 'duplicate',
+                    'message' => 'Este horario ya existe en la base de datos.',
                     'conflictos' => [[
                         'tipo' => 'duplicado',
                         'mensaje' => 'Ya existe este horario exacto en el sistema'
-                    ]]
+                    ]],
+                    'puede_guardar' => false
                 ], 400);
             }
             
             return response()->json([
                 'message' => 'Error en la base de datos al crear horario',
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
+                'puede_guardar' => false
             ], 500);
         } catch (Exception $e) {
             return response()->json([
                 'message' => 'Error al crear horario',
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
+                'puede_guardar' => false
             ], 500);
         }
     }
@@ -159,8 +163,9 @@ class HorarioController extends Controller
 
             if (!empty($conflictos)) {
                 return response()->json([
-                    'message' => 'Existen conflictos de horario',
-                    'conflictos' => $conflictos
+                    'message' => 'Existen conflictos de horario. No se puede actualizar.',
+                    'conflictos' => $conflictos,
+                    'puede_guardar' => false
                 ], 400);
             }
 
@@ -168,31 +173,33 @@ class HorarioController extends Controller
 
             return response()->json([
                 'message' => 'Horario actualizado exitosamente',
-                'horario' => $horario->load(['grupo.materia', 'grupo.docente', 'aula'])
+                'horario' => $horario->load(['grupo.materia', 'grupo.docente', 'aula']),
+                'puede_guardar' => true
             ], 200);
         } catch (QueryException $e) {
-            // Capturar errores de base de datos (constraint UNIQUE, etc)
             if (strpos($e->getMessage(), 'unique constraint') !== false || 
                 strpos($e->getMessage(), 'Unique') !== false ||
                 strpos($e->getMessage(), 'duplicate') !== false) {
                 return response()->json([
-                    'message' => 'Este horario ya existe. No se puede actualizar a un horario duplicado.',
-                    'tipo_error' => 'duplicate',
+                    'message' => 'Este horario ya existe en la base de datos.',
                     'conflictos' => [[
                         'tipo' => 'duplicado',
                         'mensaje' => 'Ya existe este horario exacto en el sistema'
-                    ]]
+                    ]],
+                    'puede_guardar' => false
                 ], 400);
             }
             
             return response()->json([
                 'message' => 'Error en la base de datos al actualizar horario',
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
+                'puede_guardar' => false
             ], 500);
         } catch (Exception $e) {
             return response()->json([
                 'message' => 'Error al actualizar horario',
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
+                'puede_guardar' => false
             ], 500);
         }
     }
@@ -218,7 +225,7 @@ class HorarioController extends Controller
     }
 
     /**
-     * Validar conflictos de horario (endpoint público)
+     * Validar conflictos de horario (endpoint público) - MEJORADO
      */
     public function validarConflictos(Request $request)
     {
@@ -234,12 +241,21 @@ class HorarioController extends Controller
 
             $conflictos = $this->validarConflictosInterno(
                 $request->all(), 
-                $request->id_horario_excluir
+                $request->id_horario_excluir ?? null
             );
 
             return response()->json([
                 'tiene_conflictos' => !empty($conflictos),
-                'conflictos' => $conflictos
+                'cantidad_conflictos' => count($conflictos),
+                'conflictos' => $conflictos,
+                'puede_guardar' => empty($conflictos),
+                'debug' => [
+                    'dia' => $request->dia_semana,
+                    'hora_inicio' => $request->hora_inicio,
+                    'hora_fin' => $request->hora_fin,
+                    'aula' => $request->id_aula,
+                    'grupo' => $request->id_grupo
+                ]
             ], 200);
         } catch (Exception $e) {
             return response()->json([
@@ -251,107 +267,150 @@ class HorarioController extends Controller
 
     /**
      * Método interno para validar conflictos
+     * Valida: 1. Conflicto de AULA 2. Conflicto de DOCENTE 3. Conflicto de GRUPO
      */
     private function validarConflictosInterno($data, $idExcluir = null)
     {
         $conflictos = [];
-        $grupo = Grupo::with('docente')->findOrFail($data['id_grupo']);
+        
+        try {
+            $grupo = Grupo::with('docente', 'materia')->findOrFail($data['id_grupo']);
+        } catch (Exception $e) {
+            return [[
+                'tipo' => 'error',
+                'mensaje' => 'Grupo no encontrado'
+            ]];
+        }
 
-        // 1. CONFLICTO DE AULA (misma aula, mismo día y hora)
-        $conflictoAula = Horario::where('id_aula', $data['id_aula'])
-            ->where('dia_semana', $data['dia_semana'])
-            ->where(function($q) use ($data) {
-                $q->whereBetween('hora_inicio', [$data['hora_inicio'], $data['hora_fin']])
-                  ->orWhereBetween('hora_fin', [$data['hora_inicio'], $data['hora_fin']])
-                  ->orWhere(function($q2) use ($data) {
-                      $q2->where('hora_inicio', '<=', $data['hora_inicio'])
-                         ->where('hora_fin', '>=', $data['hora_fin']);
-                  });
-            })
+        $horaInicio = $data['hora_inicio'];
+        $horaFin = $data['hora_fin'];
+        $diaSemana = $data['dia_semana'];
+        $idAula = $data['id_aula'];
+
+        // Convertir a minutos desde medianoche para comparación más precisa
+        $inicioMinutos = $this->horaAMinutos($horaInicio);
+        $finMinutos = $this->horaAMinutos($horaFin);
+
+        // ============================================================
+        // 1. VALIDACIÓN DE CONFLICTO DE AULA
+        // ============================================================
+        $horariosAula = Horario::where('id_aula', $idAula)
+            ->where('dia_semana', $diaSemana)
             ->when($idExcluir, function($q) use ($idExcluir) {
                 $q->where('id_horario', '!=', $idExcluir);
             })
-            ->with(['grupo.materia'])
-            ->first();
+            ->with(['grupo.docente', 'grupo.materia', 'aula'])
+            ->get();
 
-        if ($conflictoAula) {
-            $conflictos[] = [
-                'tipo' => 'aula',
-                'mensaje' => 'El aula ya está ocupada en este horario',
-                'detalle' => [
-                    'aula' => $conflictoAula->aula->nro,
-                    'materia' => $conflictoAula->grupo->materia->nombre,
-                    'grupo' => $conflictoAula->grupo->nombre,
-                    'horario' => $conflictoAula->hora_inicio . ' - ' . $conflictoAula->hora_fin
-                ]
-            ];
-        }
+        foreach ($horariosAula as $horario) {
+            $horarioInicio = $this->horaAMinutos($horario->hora_inicio);
+            $horarioFin = $this->horaAMinutos($horario->hora_fin);
 
-        // 2. CONFLICTO DE DOCENTE (mismo docente, mismo día y hora)
-        if ($grupo->id_docente) {
-            $conflictoDocente = Horario::whereHas('grupo', function($q) use ($grupo) {
-                    $q->where('id_docente', $grupo->id_docente);
-                })
-                ->where('dia_semana', $data['dia_semana'])
-                ->where(function($q) use ($data) {
-                    $q->whereBetween('hora_inicio', [$data['hora_inicio'], $data['hora_fin']])
-                      ->orWhereBetween('hora_fin', [$data['hora_inicio'], $data['hora_fin']])
-                      ->orWhere(function($q2) use ($data) {
-                          $q2->where('hora_inicio', '<=', $data['hora_inicio'])
-                             ->where('hora_fin', '>=', $data['hora_fin']);
-                      });
-                })
-                ->when($idExcluir, function($q) use ($idExcluir) {
-                    $q->where('id_horario', '!=', $idExcluir);
-                })
-                ->with(['grupo.materia', 'aula'])
-                ->first();
-
-            if ($conflictoDocente) {
+            // Verificar solapamiento: NO($finNueva <= $inicioExistente OR $inicioNueva >= $finExistente)
+            if (!($finMinutos <= $horarioInicio || $inicioMinutos >= $horarioFin)) {
                 $conflictos[] = [
-                    'tipo' => 'docente',
-                    'mensaje' => 'El docente ya tiene clase asignada en este horario',
+                    'tipo' => 'aula',
+                    'severidad' => 'error',
+                    'titulo' => 'Conflicto de Aula',
+                    'mensaje' => 'El aula ' . $horario->aula->nro . ' ya está ocupada en este horario',
                     'detalle' => [
-                        'docente' => $grupo->docente->nombre,
-                        'materia' => $conflictoDocente->grupo->materia->nombre,
-                        'aula' => $conflictoDocente->aula->nro,
-                        'horario' => $conflictoDocente->hora_inicio . ' - ' . $conflictoDocente->hora_fin
+                        'aula_ocupada' => $horario->aula->nro,
+                        'docente_ocupante' => $horario->grupo->docente->nombre ?? 'Sin asignar',
+                        'materia_ocupante' => $horario->grupo->materia->nombre ?? 'Sin materia',
+                        'grupo_ocupante' => $horario->grupo->nombre,
+                        'hora_conflicto' => $horario->hora_inicio . ' - ' . $horario->hora_fin,
+                        'dia' => $horario->dia_semana
                     ]
                 ];
+                break;
             }
         }
 
-        // 3. CONFLICTO DE GRUPO (mismo grupo, mismo día y hora)
-        $conflictoGrupo = Horario::where('id_grupo', $data['id_grupo'])
-            ->where('dia_semana', $data['dia_semana'])
-            ->where(function($q) use ($data) {
-                $q->whereBetween('hora_inicio', [$data['hora_inicio'], $data['hora_fin']])
-                  ->orWhereBetween('hora_fin', [$data['hora_inicio'], $data['hora_fin']])
-                  ->orWhere(function($q2) use ($data) {
-                      $q2->where('hora_inicio', '<=', $data['hora_inicio'])
-                         ->where('hora_fin', '>=', $data['hora_fin']);
-                  });
-            })
+        // ============================================================
+        // 2. VALIDACIÓN DE CONFLICTO DE DOCENTE
+        // ============================================================
+        if ($grupo->id_docente) {
+            $horariosDocente = Horario::whereHas('grupo', function($q) use ($grupo) {
+                    $q->where('id_docente', $grupo->id_docente);
+                })
+                ->where('dia_semana', $diaSemana)
+                ->when($idExcluir, function($q) use ($idExcluir) {
+                    $q->where('id_horario', '!=', $idExcluir);
+                })
+                ->with(['grupo.docente', 'grupo.materia', 'aula'])
+                ->get();
+
+            foreach ($horariosDocente as $horario) {
+                $horarioInicio = $this->horaAMinutos($horario->hora_inicio);
+                $horarioFin = $this->horaAMinutos($horario->hora_fin);
+
+                if (!($finMinutos <= $horarioInicio || $inicioMinutos >= $horarioFin)) {
+                    $conflictos[] = [
+                        'tipo' => 'docente',
+                        'severidad' => 'error',
+                        'titulo' => 'Conflicto de Docente',
+                        'mensaje' => 'El docente ' . $grupo->docente->nombre . ' ya tiene clase en este horario',
+                        'detalle' => [
+                            'docente' => $grupo->docente->nombre,
+                            'materia_existente' => $horario->grupo->materia->nombre ?? 'Sin materia',
+                            'grupo_existente' => $horario->grupo->nombre,
+                            'aula_existente' => $horario->aula->nro,
+                            'hora_conflicto' => $horario->hora_inicio . ' - ' . $horario->hora_fin,
+                            'dia' => $horario->dia_semana,
+                            'nueva_materia' => $grupo->materia->nombre ?? 'Sin materia',
+                            'nueva_aula' => $idAula
+                        ]
+                    ];
+                    break;
+                }
+            }
+        }
+
+        // ============================================================
+        // 3. VALIDACIÓN DE CONFLICTO DE GRUPO
+        // ============================================================
+        $horariosGrupo = Horario::where('id_grupo', $data['id_grupo'])
+            ->where('dia_semana', $diaSemana)
             ->when($idExcluir, function($q) use ($idExcluir) {
                 $q->where('id_horario', '!=', $idExcluir);
             })
-            ->with(['aula'])
-            ->first();
+            ->with(['grupo.materia', 'grupo.docente', 'aula'])
+            ->get();
 
-        if ($conflictoGrupo) {
-            $conflictos[] = [
-                'tipo' => 'grupo',
-                'mensaje' => 'El grupo ya tiene clase asignada en este horario',
-                'detalle' => [
-                    'grupo' => $grupo->nombre,
-                    'materia' => $grupo->materia->nombre,
-                    'aula' => $conflictoGrupo->aula->nro,
-                    'horario' => $conflictoGrupo->hora_inicio . ' - ' . $conflictoGrupo->hora_fin
-                ]
-            ];
+        foreach ($horariosGrupo as $horario) {
+            $horarioInicio = $this->horaAMinutos($horario->hora_inicio);
+            $horarioFin = $this->horaAMinutos($horario->hora_fin);
+
+            if (!($finMinutos <= $horarioInicio || $inicioMinutos >= $horarioFin)) {
+                $conflictos[] = [
+                    'tipo' => 'grupo',
+                    'severidad' => 'error',
+                    'titulo' => 'Conflicto de Grupo',
+                    'mensaje' => 'El grupo ' . $grupo->nombre . ' ya tiene clase en este horario',
+                    'detalle' => [
+                        'grupo' => $grupo->nombre,
+                        'materia_existente' => $horario->grupo->materia->nombre ?? 'Sin materia',
+                        'aula_existente' => $horario->aula->nro,
+                        'docente_existente' => $horario->grupo->docente->nombre ?? 'Sin asignar',
+                        'hora_conflicto' => $horario->hora_inicio . ' - ' . $horario->hora_fin,
+                        'dia' => $horario->dia_semana,
+                        'nueva_aula' => $idAula
+                    ]
+                ];
+                break;
+            }
         }
 
         return $conflictos;
+    }
+
+    /**
+     * Convierte hora en formato HH:mm a minutos desde medianoche
+     */
+    private function horaAMinutos($hora)
+    {
+        list($horas, $minutos) = explode(':', $hora);
+        return intval($horas) * 60 + intval($minutos);
     }
 
     /**
@@ -408,6 +467,42 @@ class HorarioController extends Controller
         } catch (Exception $e) {
             return response()->json([
                 'message' => 'Error al obtener carga horaria',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * DEBUG: Obtener todos los horarios de un aula en un día específico
+     */
+    public function debugAula($idAula, Request $request)
+    {
+        try {
+            $request->validate([
+                'dia_semana' => 'nullable|string'
+            ]);
+
+            $query = Horario::where('id_aula', $idAula)
+                ->with(['grupo.docente', 'grupo.materia', 'aula']);
+
+            if ($request->dia_semana) {
+                $query->where('dia_semana', $request->dia_semana);
+            }
+
+            $horarios = $query->orderBy('dia_semana')
+                             ->orderBy('hora_inicio')
+                             ->get();
+
+            return response()->json([
+                'aula_id' => $idAula,
+                'cantidad' => $horarios->count(),
+                'horarios' => $horarios,
+                'filtro_dia' => $request->dia_semana ?? 'Sin filtro'
+            ], 200);
+
+        } catch (Exception $e) {
+            return response()->json([
+                'message' => 'Error al obtener horarios del aula',
                 'error' => $e->getMessage()
             ], 500);
         }

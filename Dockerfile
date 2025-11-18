@@ -50,17 +50,8 @@ RUN sed -ri -e 's!/var/www/html!${APACHE_DOCUMENT_ROOT}!g' /etc/apache2/sites-av
 RUN sed -ri -e 's!/var/www/html!${APACHE_DOCUMENT_ROOT}!g' /etc/apache2/apache2.conf /etc/apache2/conf-available/*.conf
 
 # Script de inicialización
-RUN echo '#!/bin/bash\n\
-mkdir -p /var/www/html/storage/logs\n\
-mkdir -p /var/www/html/storage/framework/sessions\n\
-mkdir -p /var/www/html/storage/framework/views\n\
-mkdir -p /var/www/html/storage/framework/cache\n\
-mkdir -p /var/www/html/bootstrap/cache\n\
-chmod -R 777 /var/www/html/storage\n\
-chmod -R 777 /var/www/html/bootstrap/cache\n\
-php artisan config:cache\n\
-php artisan route:cache\n\
-apache2-foreground' > /entrypoint.sh && chmod +x /entrypoint.sh
+COPY docker-entrypoint.sh /entrypoint.sh
+RUN chmod +x /entrypoint.sh
 
 # Exponer puerto 80
 EXPOSE 80
