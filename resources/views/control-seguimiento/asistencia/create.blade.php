@@ -324,28 +324,62 @@ document.addEventListener('DOMContentLoaded', function() {
 
 function abrirLectorQR() {
     const video = document.getElementById('qr-video');
-    qrScannerActive = true;
+
+    limpiarRecursosQR();
     
+    qrScannerActive = true;
+
     if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-        alert('Tu navegador no soporta acceso a cámara');
+        alert('Tu navegador no soporta acceso a cámara. Usa Chrome, Firefox o Safari.');
         return;
     }
 
+    // Mostrar estado de carga
+    document.getElementById('qr-status').classList.remove('d-none');
+    document.getElementById('qr-message').textContent = 'Iniciando cámara...';
+
     navigator.mediaDevices.getUserMedia({ 
-        video: { facingMode: 'environment' } 
+        video: { 
+            facingMode: 'environment',
+            width: { ideal: 1280 },
+            height: { ideal: 720 },
+            frameRate: { ideal: 15 }
+        } 
     })
     .then(function(mediaStream) {
         stream = mediaStream;
         video.srcObject = stream;
-        document.getElementById('qr-scanner').style.display = 'block';
-        document.getElementById('btn-scanner-qr').style.display = 'none';
-        document.getElementById('btn-cerrar-scanner').style.display = 'inline-block';
-        
-        // Iniciar lectura de QR
-        leerQR();
+    
+        video.onloadedmetadata = function() {
+            video.play().then(() => {
+                document.getElementById('qr-scanner').style.display = 'block';
+                document.getElementById('btn-scanner-qr').style.display = 'none';
+                document.getElementById('btn-cerrar-scanner').style.display = 'inline-block';
+                document.getElementById('qr-message').textContent = 'Escaneando QR...';
+                
+                // Iniciar lectura de QR
+                leerQR();
+            }).catch(error => {
+                console.error('Error reproduciendo video:', error);
+                alert('Error al iniciar la cámara: ' + error.message);
+                limpiarRecursosQR();
+            });
+        };
     })
     .catch(function(error) {
-        alert('Error al acceder a la cámara: ' + error.message);
+        console.error('Error acceso cámara:', error);
+        let mensaje = 'Error al acceder a la cámara: ';
+        
+        if (error.name === 'NotAllowedError') {
+            mensaje += 'Permiso denegado. Por favor permite el acceso a la cámara.';
+        } else if (error.name === 'NotFoundError') {
+            mensaje += 'No se encontró cámara trasera.';
+        } else {
+            mensaje += error.message;
+        }
+        
+        alert(mensaje);
+        limpiarRecursosQR();
     });
 }
 
@@ -359,38 +393,77 @@ function cerrarLectorQR() {
     document.getElementById('btn-scanner-qr').style.display = 'block';
     document.getElementById('btn-cerrar-scanner').style.display = 'none';
 }
-
 function leerQR() {
     const video = document.getElementById('qr-video');
     const canvas = document.createElement('canvas');
-    const ctx = canvas.getContext('2d');
+    canvas.willReadFrequently = true; 
+    
+    const ctx = canvas.getContext('2d', {
+        willReadFrequently: true 
+    });
+
+    let procesando = false;
 
     const procesarFrame = () => {
-        if (!qrScannerActive) return;
+        if (!qrScannerActive || procesando) return;
 
-        if (video.readyState === video.HAVE_ENOUGH_DATA) {
-            canvas.width = video.videoWidth;
-            canvas.height = video.videoHeight;
-            ctx.drawImage(video, 0, 0);
-
+        if (video.readyState === video.HAVE_ENOUGH_DATA && video.videoWidth > 0) {
+            procesando = true;
+            
             try {
+                // Configurar canvas al tamaño del video
+                canvas.width = video.videoWidth;
+                canvas.height = video.videoHeight;
+                
+                // Dibujar frame
+                ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
                 const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+                
+                // Procesar QR
                 const code = jsQR(imageData.data, canvas.width, canvas.height);
 
                 if (code) {
-                    // QR detectado
+                    console.log('QR detectado:', code.data);
                     validarQRLeido(code.data);
-                    return; // Salir del loop después de detectar
+                    procesando = false;
+                    return;
                 }
             } catch (e) {
-                // Continuar buscando
+                console.warn('Error procesando frame QR:', e);
             }
+            
+            procesando = false;
         }
-
-        requestAnimationFrame(procesarFrame);
+        if (qrScannerActive) {
+            requestAnimationFrame(procesarFrame);
+        }
     };
 
+    // Iniciar el procesamiento
     procesarFrame();
+}
+function limpiarRecursosQR() {
+    qrScannerActive = false;
+    if (stream) {
+        stream.getTracks().forEach(track => {
+            track.stop();
+        });
+        stream = null;
+    }
+    
+    const video = document.getElementById('qr-video');
+    if (video) {
+        video.srcObject = null;
+    }
+    
+    document.getElementById('qr-scanner').style.display = 'none';
+    document.getElementById('btn-scanner-qr').style.display = 'block';
+    document.getElementById('btn-cerrar-scanner').style.display = 'none';
+}
+
+// Actualizar cerrarLectorQR para usar la nueva función
+function cerrarLectorQR() {
+    limpiarRecursosQR();
 }
 
 function validarQRLeido(codigoQr) {
