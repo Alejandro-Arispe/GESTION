@@ -14,6 +14,9 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware) {
+        // Confiar en los proxies de Render (X-Forwarded-* headers)
+        $middleware->trustProxies(at: '*');
+        
         $middleware->alias([
             'permission' => \App\Http\Middleware\CheckPermission::class,
             'permiso' => \App\Http\Middleware\ValidarPermisoRol::class,

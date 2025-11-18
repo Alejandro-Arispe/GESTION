@@ -9,23 +9,27 @@ services:
         value: production
       - key: APP_DEBUG
         value: "false"
+      - key: APP_URL
+        value: https://gestion-h31f.onrender.com
       - key: DB_CONNECTION
         value: pgsql
       - key: DB_HOST
-        value: db.lobzlococoykiwesfplm.supabase.co
+        value: dpg-d40oac2li9vc73bqm490-a.oregon-postgres.render.com
       - key: DB_PORT
         value: "5432"
       - key: DB_DATABASE
-        value: postgres
+        value: gestion_t597
       - key: DB_USERNAME
-        value: postgres
+        value: gestion_t597_user
       - key: DB_PASSWORD
-        syncWith: RENDER_DB_PASSWORD
+        value: 63UwvsuhhzJtHL7ezw4tHaH7SmTcBunf
+      - key: DB_SSLMODE
+        value: require
     preDeployCommand: >
       php artisan config:cache &&
       php artisan route:cache &&
       php artisan migrate --force &&
       php artisan db:seed --class=CreateDefaultUserSeeder
-    healthCheckPath: /
+    healthCheckPath: /up
     domains:
-      - tu-dominio.onrender.com
+      - gestion-h31f.onrender.com

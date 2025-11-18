@@ -13,6 +13,7 @@ class Kernel extends HttpKernel
         // Manejo de errores y mantenimiento global
         \Illuminate\Foundation\Http\Middleware\CheckForMaintenanceMode::class,
         \Illuminate\Http\Middleware\HandleCors::class,
+        \App\Http\Middleware\ForceHttps::class,
         \Illuminate\Http\Middleware\TrustProxies::class,
         \Illuminate\Http\Middleware\ValidatePostSize::class,
         \App\Http\Middleware\TrimStrings::class,
